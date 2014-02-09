@@ -5,8 +5,8 @@ and parallel processing with Resque or Sidekiq.
 
 One `smarter_csv` user wrote:
 
-  *Best gem for CSV for us yet. [...] taking an import process from 7+ hours to about 3 minutes.
-   [...] Smarter CSV was a big part and helped clean up our code ALOT*
+> Best gem for CSV for us yet. [...] taking an import process from 7+ hours to about 3 minutes.
+> [...] Smarter CSV was a big part and helped clean up our code ALOT*
 
 `smarter_csv` has lots of features:
  * able to process large CSV-files
@@ -18,7 +18,7 @@ One `smarter_csv` user wrote:
  * able to ignore "columns" in the input (delete columns)
  * able to eliminate nil or empty fields from the result hashes (default)
 
-NOTE; This Gem is only for importing CSV files - writing of CSV files is not supported.
+NOTE: This Gem is only for importing CSV files - writing of CSV files is not supported.
 
 ### Why?
 
@@ -35,97 +35,108 @@ The two main choices you have in terms of how to call `SmarterCSV.process` are:
 #### Example 1a: How SmarterCSV processes CSV-files as array of hashes:
 Please note how each hash contains only the keys for columns with non-null values.
 
-     $ cat pets.csv
-     first name,last name,dogs,cats,birds,fish
-     Dan,McAllister,2,,,
-     Lucy,Laweless,,5,,
-     Miles,O'Brian,,,,21
-     Nancy,Homes,2,,1,
-     $ irb
-     > require 'smarter_csv'
-      => true
-     > pets_by_owner = SmarterCSV.process('/tmp/pets.csv')
-      => [ {:first_name=>"Dan", :last_name=>"McAllister", :dogs=>"2"},
-           {:first_name=>"Lucy", :last_name=>"Laweless", :cats=>"5"},
-           {:first_name=>"Miles", :last_name=>"O'Brian", :fish=>"21"},
-           {:first_name=>"Nancy", :last_name=>"Homes", :dogs=>"2", :birds=>"1"}
-         ]
-
+```
+$ cat pets.csv
+first name,last name,dogs,cats,birds,fish
+Dan,McAllister,2,,,
+Lucy,Laweless,,5,,
+Miles,O'Brian,,,,21
+Nancy,Homes,2,,1,
+$ irb
+> require 'smarter_csv'
+=> true
+> pets_by_owner = SmarterCSV.process('/tmp/pets.csv')
+=> [ {:first_name=>"Dan", :last_name=>"McAllister", :dogs=>"2"},
+     {:first_name=>"Lucy", :last_name=>"Laweless", :cats=>"5"},
+     {:first_name=>"Miles", :last_name=>"O'Brian", :fish=>"21"},
+     {:first_name=>"Nancy", :last_name=>"Homes", :dogs=>"2", :birds=>"1"}
+   ]
+```
 
 #### Example 1b: How SmarterCSV processes CSV-files as chunks, returning arrays of hashes:
 Please note how the returned array contains two sub-arrays containing the chunks which were read, each chunk containing 2 hashes.
 In case the number of rows is not cleanly divisible by `:chunk_size`, the last chunk contains fewer hashes.
 
-     > pets_by_owner = SmarterCSV.process('/tmp/pets.csv', {:chunk_size => 2, :key_mapping => {:first_name => :first, :last_name => :last}})
-       => [ [ {:first=>"Dan", :last=>"McAllister", :dogs=>"2"}, {:first=>"Lucy", :last=>"Laweless", :cats=>"5"} ],
-            [ {:first=>"Miles", :last=>"O'Brian", :fish=>"21"}, {:first=>"Nancy", :last=>"Homes", :dogs=>"2", :birds=>"1"} ]
-          ]
+```
+> pets_by_owner = SmarterCSV.process('/tmp/pets.csv', {:chunk_size => 2, :key_mapping => {:first_name => :first, :last_name => :last}})
+=> [ [ {:first=>"Dan", :last=>"McAllister", :dogs=>"2"}, {:first=>"Lucy", :last=>"Laweless", :cats=>"5"} ],
+     [ {:first=>"Miles", :last=>"O'Brian", :fish=>"21"}, {:first=>"Nancy", :last=>"Homes", :dogs=>"2", :birds=>"1"} ] ]
+```
 
 #### Example 1c: How SmarterCSV processes CSV-files as chunks, and passes arrays of hashes to a given block:
 Please note how the given block is passed the data for each chunk as the parameter (array of hashes),
 and how the `process` method returns the number of chunks when called with a block
 
-     > total_chunks = SmarterCSV.process('/tmp/pets.csv', {:chunk_size => 2, :key_mapping => {:first_name => :first, :last_name => :last}}) do |chunk|
-         chunk.each do |h|   # you can post-process the data from each row to your heart's content, and also create virtual attributes:
-           h[:full_name] = [h[:first],h[:last]].join(' ')  # create a virtual attribute
-           h.delete(:first) ; h.delete(:last)              # remove two keys
-         end
-         puts chunk.inspect   # we could at this point pass the chunk to a Resque worker..
-       end
+```
+> total_chunks = SmarterCSV.process('/tmp/pets.csv', {:chunk_size => 2, :key_mapping => {:first_name => :first, :last_name => :last}}) do |chunk|
+    chunk.each do |h|   # you can post-process the data from each row to your heart's content, and also create virtual attributes:
+      h[:full_name] = [h[:first],h[:last]].join(' ')  # create a virtual attribute
+      h.delete(:first) ; h.delete(:last)              # remove two keys
+    end
+    puts chunk.inspect   # we could at this point pass the chunk to a Resque worker..
+  end
 
-       [{:dogs=>"2", :full_name=>"Dan McAllister"}, {:cats=>"5", :full_name=>"Lucy Laweless"}]
-       [{:fish=>"21", :full_name=>"Miles O'Brian"}, {:dogs=>"2", :birds=>"1", :full_name=>"Nancy Homes"}]
-        => 2
+[{:dogs=>"2", :full_name=>"Dan McAllister"}, {:cats=>"5", :full_name=>"Lucy Laweless"}]
+[{:fish=>"21", :full_name=>"Miles O'Brian"}, {:dogs=>"2", :birds=>"1", :full_name=>"Nancy Homes"}]
+=> 2
+```
 
 #### Example 2: Reading a CSV-File in one Chunk, returning one Array of Hashes:
 
-    filename = '/tmp/input_file.txt' # TAB delimited file, each row ending with Control-M
-    recordsA = SmarterCSV.process(filename, {:col_sep => "\t", :row_sep => "\cM"})  # no block given
+```
+> filename = '/tmp/input_file.txt' # TAB delimited file, each row ending with Control-M
+> recordsA = SmarterCSV.process(filename, {:col_sep => "\t", :row_sep => "\cM"})  # no block given
 
-    => returns an array of hashes
+=> returns an array of hashes
+```
 
 #### Example 3: Populate a MySQL or MongoDB Database with SmarterCSV:
 
-    # without using chunks:
-    filename = '/tmp/some.csv'
-    n = SmarterCSV.process(filename, {:key_mapping => {:unwanted_row => nil, :old_row_name => :new_name}}) do |array|
-          # we're passing a block in, to process each resulting hash / =row (the block takes array of hashes)
-          # when chunking is not enabled, there is only one hash in each array
-          MyModel.create( array.first )
-    end
+```
+> # without using chunks:
+> filename = '/tmp/some.csv'
+> n = SmarterCSV.process(filename, {:key_mapping => {:unwanted_row => nil, :old_row_name => :new_name}}) do |array|
+    # we're passing a block in, to process each resulting hash / =row (the block takes array of hashes)
+    # when chunking is not enabled, there is only one hash in each array
+    MyModel.create( array.first )
+  end
 
-     => returns number of chunks / rows we processed
-
+=> returns number of chunks / rows we processed
+```
 
 #### Example 4: Populate a MongoDB Database in Chunks of 100 records with SmarterCSV:
 
-    # using chunks:
-    filename = '/tmp/some.csv'
-    n = SmarterCSV.process(filename, {:chunk_size => 100, :key_mapping => {:unwanted_row => nil, :old_row_name => :new_name}}) do |chunk|
-          # we're passing a block in, to process each resulting hash / row (block takes array of hashes)
-          # when chunking is enabled, there are up to :chunk_size hashes in each chunk
-          MyModel.collection.insert( chunk )   # insert up to 100 records at a time
-    end
+```
+> # using chunks:
+> filename = '/tmp/some.csv'
+> n = SmarterCSV.process(filename, {:chunk_size => 100, :key_mapping => {:unwanted_row => nil, :old_row_name => :new_name}}) do |chunk|
+    # we're passing a block in, to process each resulting hash / row (block takes array of hashes)
+    # when chunking is enabled, there are up to :chunk_size hashes in each chunk
+    MyModel.collection.insert( chunk )   # insert up to 100 records at a time
+  end
 
-     => returns number of chunks we processed
-
+=> returns number of chunks we processed
+```
 
 #### Example 5: Reading a CSV-like File, and Processing it with Resque:
 
-    filename = '/tmp/strange_db_dump'   # a file with CRTL-A as col_separator, and with CTRL-B\n as record_separator (hello iTunes)
-    n = SmarterCSV.process(filename, {:col_sep => "\cA", :row_sep => "\cB\n", :comment_regexp => /^#/,
-            :chunk_size => 100 , :key_mapping => {:export_date => nil, :name => :genre}}) do |chunk|
-        Resque.enque( ResqueWorkerClass, chunk ) # pass chunks of CSV-data to Resque workers for parallel processing
-    end
-    => returns number of chunks
-
+```
+> filename = '/tmp/strange_db_dump'   # a file with CRTL-A as col_separator, and with CTRL-B\n as record_separator (hello iTunes)
+> n = SmarterCSV.process(filename, {:col_sep => "\cA", :row_sep => "\cB\n", :comment_regexp => /^#/,
+                                    :chunk_size => 100 , :key_mapping => {:export_date => nil, :name => :genre}}) do |chunk|
+    Resque.enqueue( ResqueWorkerClass, chunk ) # pass chunks of CSV-data to Resque workers for parallel processing
+  end
+=> returns number of chunks
+```
 
 ## Documentation
 
 The `process` method reads and processes a "generalized" CSV file and returns the contents either as an Array of Hashes,
 or an Array of Arrays, which contain Hashes, or processes Chunks of Hashes via a given block.
 
-    SmarterCSV.process(filename, options={}, &block)
+```ruby
+SmarterCSV.process(filename, options={}, &block)
+```
 
 The options and the block are optional.
 
@@ -167,15 +178,17 @@ The options and the block are optional.
 
 
 #### NOTES about File Encodings:
+
  * if you have a CSV file which contains unicode characters, you can process it as follows:
 
-
-       f = File.open(filename, "r:bom|utf-8");
-       data = SmarterCSV.process(f);
-       f.close
-
+```ruby
+f = File.open(filename, "r:bom|utf-8");
+data = SmarterCSV.process(f);
+f.close
+```
 
 #### NOTES about CSV Headers:
+
  * as this method parses CSV files, it is assumed that the first line of any file will contain a valid header
  * the first line with the CSV header may or may not be commented out according to the :comment_regexp
  * any occurences of :comment_regexp or :row_sep will be stripped from the first line with the CSV header
@@ -184,11 +197,13 @@ The options and the block are optional.
  * if the incorrect number of headers are provided via :user_provided_headers, exception SmarterCSV::HeaderSizeMismatch is raised
 
 #### NOTES on Key Mapping:
+
  * keys in the header line of the file can be re-mapped to a chosen set of symbols, so the resulting Hashes can be better used internally in your application (e.g. when directly creating MongoDB entries with them)
  * if you want to completely delete a key, then map it to nil or to '', they will be automatically deleted from any result Hash
  * if you have input files with a large number of columns, and you want to ignore all columns which are not specifically mapped with :key_mapping, then use option :remove_unmapped_keys => true
 
 #### NOTES on the use of Chunking and Blocks:
+
  * chunking can be VERY USEFUL if used in combination with passing a block to File.read_csv FOR LARGE FILES
  * if you pass a block to File.read_csv, that block will be executed and given an Array of Hashes as the parameter.
  * if the chunk_size is not set, then the array will only contain one Hash.
@@ -196,13 +211,14 @@ The options and the block are optional.
  * this can be very useful when passing chunked data to a post-processing step, e.g. through Resque
 
 #### NOTES on improper quotation and unwanted characters in headers:
+
  * some CSV files use un-escaped quotation characters inside fields. This can cause the import to break. To get around this, use the `:force_simple_split => true` option in combination with `:strip_chars_from_headers => /[\-"]/` . This will also significantly speed up the import.
    If you would force a different :quote_char instead (setting it to a non-used character), then the import would be up to 5-times slower than using `:force_simple_split`.
 
 #### Known Issues:
+
  * if you are using 1.8.7 versions of Ruby, JRuby, or Ruby Enterprise Edition, `smarter_csv` will have problems with double-quoted fields, because of a bug in an underlying library.
  * if your CSV data contains the :row_sep character, e.g. CR, smarter_csv will not be able to handle the data, but will report `CSV::MalformedCSVError: Unclosed quoted field`.
-
 
 Example of Invalid CSV:
 
@@ -215,27 +231,29 @@ Example of Invalid CSV:
 The second row contains a comment with an embedded \n carriage return character.
 `smarter_csv` handles this special case as invalid CSV.
 
-
 ## See also:
 
   http://www.unixgods.org/~tilo/Ruby/process_csv_as_hashes.html
-
-
 
 ## Installation
 
 Add this line to your application's Gemfile:
 
-    gem 'smarter_csv'
+```ruby
+gem 'smarter_csv'
+```
 
 And then execute:
 
-    $ bundle
+```
+$ bundle
+```
 
 Or install it yourself as:
 
-    $ gem install smarter_csv
-
+```
+$ gem install smarter_csv
+```
 
 ## Changes
 
